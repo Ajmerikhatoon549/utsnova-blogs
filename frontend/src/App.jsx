@@ -55,20 +55,39 @@ function Home() {
   const [blogs, setBlogs] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
+  
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 5; // Ek page par 5 blogs dikhenge
 
   useEffect(() => {
-    fetchBlogs();
-  }, [search, selectedTag]);
+    fetchBlogs(currentPage);
+  }, [search, selectedTag, currentPage]);
 
-  const fetchBlogs = async () => {
+  const fetchBlogs = async (page) => {
     try {
       const res = await axios.get(`${API}/blogs`, {
-        params: { search, tag: selectedTag }
+        params: { search, tag: selectedTag, page, limit }
       });
-      setBlogs(res.data);
+      // Backend se ab { blogs, currentPage, totalPages } aa raha hai
+      setBlogs(res.data.blogs);
+      setCurrentPage(res.data.currentPage);
+      setTotalPages(res.data.totalPages);
     } catch (err) {
       console.error(err);
     }
+  };
+
+  // Jab search ya tag change ho toh page 1 par reset kar dein
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleTagSelect = (t) => {
+    setSelectedTag(t);
+    setCurrentPage(1);
   };
 
   return (
@@ -82,10 +101,10 @@ function Home() {
             type="text" 
             placeholder="Search by title, keywords..." 
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
           />
           {selectedTag && (
-            <button onClick={() => setSelectedTag('')} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>Clear Tag</button>
+            <button onClick={() => { setSelectedTag(''); setCurrentPage(1); }} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>Clear Tag</button>
           )}
         </div>
       </div>
@@ -102,7 +121,7 @@ function Home() {
               <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '15px', lineHeight: '1.5' }}>{blog.content.substring(0, 100)}...</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '15px' }}>
                 {blog.tags.map((t, idx) => (
-                  <span key={idx} onClick={() => setSelectedTag(t)} className="tag">
+                  <span key={idx} onClick={() => handleTagSelect(t)} className="tag" style={{ cursor: 'pointer' }}>
                     #{t}
                   </span>
                 ))}
@@ -113,6 +132,33 @@ function Home() {
         ))}
         {blogs.length === 0 && <p style={{ textAlign: 'center', gridColumn: 'span 3', color: '#64748b', marginTop: '2rem' }}>No blogs found.</p>}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', margin: '3rem 0' }}>
+          <button 
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+            disabled={currentPage === 1}
+            className="btn-secondary"
+            style={{ padding: '0.5rem 1rem', opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+          >
+            &larr; Previous
+          </button>
+
+          <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#475569' }}>
+            Page {currentPage} of {totalPages}
+          </span>
+
+          <button 
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+            disabled={currentPage === totalPages}
+            className="btn-secondary"
+            style={{ padding: '0.5rem 1rem', opacity: currentPage === totalPages ? 0.5 : 1, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+          >
+            Next &rarr;
+          </button>
+        </div>
+      )}
     </div>
   );
 }

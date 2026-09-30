@@ -56,9 +56,14 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
-// --- PUBLIC BLOG ROUTES ---
+// --- PUBLIC BLOG ROUTES (With Pagination, Search & Tag Filters) ---
 app.get('/api/blogs', async (req, res) => {
   try {
+    // Pagination parameters (Default: page 1, limit 5 blogs per page)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
+
     const { search, tag } = req.query;
     let query = { status: 'Published' };
 
@@ -72,8 +77,22 @@ app.get('/api/blogs', async (req, res) => {
       query.tags = tag;
     }
 
-    const blogs = await Blog.find(query).sort({ createdAt: -1 });
-    res.json(blogs);
+    // Fetch paginated blogs
+    const blogs = await Blog.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Get total count for frontend pagination controls
+    const totalBlogs = await Blog.countDocuments(query);
+
+    res.json({
+      success: true,
+      blogs,
+      currentPage: page,
+      totalPages: Math.ceil(totalBlogs / limit),
+      totalBlogs
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
