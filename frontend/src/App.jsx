@@ -1,9 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { Search, BookOpen, LayoutDashboard, PlusCircle, LogOut, Trash2, Edit, CheckCircle, FileText } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import AIGenerator from './AIGenerator';
+import {
+  Search, BookOpen, LayoutDashboard, PlusCircle, LogOut, Trash2, Edit, CheckCircle, FileText,
+  Bold, Italic, Heading2, List, ListOrdered, Link as LinkIcon, Code, Quote, Eye, Pencil, Image as ImageIcon
+} from 'lucide-react';
 
-const API = "http://localhost:5000/api";
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const SERVER = API.replace(/\/api\/?$/, '');
+
+// Adds the server address to uploaded image paths like "/uploads/xxx.jpg"
+const imgUrl = (src) => (src && src.startsWith('/uploads') ? SERVER + src : src);
+
+// Uploaded images are stored as "/uploads/xxx.jpg" - add the server address when showing them
+const mdComponents = {
+  img: ({ src, alt }) => (
+    <img src={src && src.startsWith('/uploads') ? SERVER + src : src} alt={alt || ''} />
+  ),
+};
 
 export default function App() {
   return (
@@ -51,6 +68,9 @@ function Navbar() {
   );
 }
 
+const excerpt = (md) =>
+  md.replace(/[#*_`>~\[\]()!-]/g, '').replace(/\s+/g, ' ').trim().substring(0, 100);
+
 function Home() {
   const [blogs, setBlogs] = useState([]);
   const [search, setSearch] = useState('');
@@ -59,7 +79,7 @@ function Home() {
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const limit = 5; // Ek page par 5 blogs dikhenge
+  const limit = 6; // 6 blogs per page = 2 full rows of 3
 
   useEffect(() => {
     fetchBlogs(currentPage);
@@ -99,7 +119,7 @@ function Home() {
         <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '10px', maxWidth: '400px', margin: '20px auto 0' }}>
           <input 
             type="text" 
-            placeholder="Search by title, keywords..." 
+            placeholder="Search by title, content or #tag..." 
             value={search}
             onChange={handleSearchChange}
           />
@@ -113,12 +133,16 @@ function Home() {
         {blogs.map(blog => (
           <div key={blog._id} className="card">
             <div>
+              {blog.coverImage && (
+                <img src={imgUrl(blog.coverImage)} alt={blog.title} onError={(e) => { e.target.style.display = 'none'; }}
+                  style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '8px', marginBottom: '12px' }} />
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '10px' }}>
                 <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
                 <span className="badge">{blog.status}</span>
               </div>
               <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '10px', color: '#1e293b' }}>{blog.title}</h2>
-              <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '15px', lineHeight: '1.5' }}>{blog.content.substring(0, 100)}...</p>
+              <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '15px', lineHeight: '1.5' }}>{excerpt(blog.content)}...</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '15px' }}>
                 {blog.tags.map((t, idx) => (
                   <span key={idx} onClick={() => handleTagSelect(t)} className="tag" style={{ cursor: 'pointer' }}>
@@ -162,28 +186,53 @@ function Home() {
     </div>
   );
 }
-
 function BlogDetail() {
   const { id } = useParams();
   const [blog, setBlog] = useState(null);
 
   useEffect(() => {
-    axios.get(`${API}/blogs/${id}`).then(res => setBlog(res.data)).catch(err => console.error(err));
+    axios.get(`http://localhost:5000/api/blogs/${id}`)
+      .then(res => setBlog(res.data))
+      .catch(err => console.error(err));
   }, [id]);
 
   if (!blog) return <div style={{ textAlign: 'center', padding: '3rem' }}>Loading...</div>;
 
   return (
-    <div className="card" style={{ maxWidth: '750px', margin: '2rem auto', padding: '2.5rem' }}>
-      <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{new Date(blog.createdAt).toLocaleDateString()}</span>
-      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', margin: '10px 0 15px', color: '#1e293b' }}>{blog.title}</h1>
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-        {blog.tags.map((t, i) => <span key={i} className="badge">#{t}</span>)}
-      </div>
-      <div style={{ color: '#334155', lineHeight: '1.8', whiteSpace: 'pre-line', marginBottom: '30px' }}>{blog.content}</div>
-      <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '6px', borderLeft: '4px solid #4f46e5' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#1e293b' }}>Conclusion</h3>
-        <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '5px' }}>{blog.conclusion}</p>
+    <div style={{ maxWidth: '900px', width: '100%', margin: '2rem auto', padding: '0 20px' }}>
+      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '3rem', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+        
+        <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+          {new Date(blog.createdAt).toLocaleDateString()}
+        </span>
+        
+        <h1 style={{ fontSize: '2.2rem', fontWeight: 'bold', margin: '10px 0 15px', color: '#1e293b' }}>
+          {blog.title}
+        </h1>
+        
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '25px', flexWrap: 'wrap' }}>
+          {blog.tags.map((t, i) => <span key={i} className="badge">#{t}</span>)}
+        </div>
+
+        {/* --- 2. Yahan ReactMarkdown ka use karein content dikhane ke liye --- */}
+        {blog.coverImage && (
+          <img src={imgUrl(blog.coverImage)} alt={blog.title} onError={(e) => { e.target.style.display = 'none'; }}
+            style={{ width: '100%', maxHeight: '420px', objectFit: 'cover', borderRadius: '10px', marginBottom: '25px' }} />
+        )}
+
+        <div className="markdown-body" style={{ fontSize: '1.05rem', marginBottom: '35px' }}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{blog.content}</ReactMarkdown>
+        </div>
+
+        {blog.conclusion && (
+          <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '8px', borderLeft: '4px solid #4f46e5' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#1e293b' }}>Conclusion</h3>
+            <p style={{ color: '#64748b', fontSize: '0.95rem', marginTop: '5px', lineHeight: '1.6' }}>
+              {blog.conclusion}
+            </p>
+          </div>
+        )}
+
       </div>
     </div>
   );
@@ -221,6 +270,107 @@ function AdminLogin() {
         </div>
         <button type="submit" style={{ width: '100%', padding: '0.75rem', marginTop: '10px' }}>Login</button>
       </form>
+    </div>
+  );
+}
+
+function MarkdownEditor({ value, onChange }) {
+  const ref = useRef(null);
+  const fileRef = useRef(null);
+  const [preview, setPreview] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // Upload an image and insert it into the content as Markdown
+  const handleImage = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const data = new FormData();
+    data.append('image', file);
+    setUploading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(`${API}/admin/upload`, data, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const pos = ref.current.selectionStart;
+      const alt = file.name.replace(/\.[^.]+$/, '');
+      const md = `\n![${alt}](${res.data.url})\n`;
+      onChange(value.slice(0, pos) + md + value.slice(pos));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Image upload failed');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  // Wrap selected text (bold, italic, code, link...)
+  const wrap = (before, after, placeholder) => {
+    const el = ref.current;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selected = value.slice(start, end) || placeholder;
+    onChange(value.slice(0, start) + before + selected + after + value.slice(end));
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + before.length, start + before.length + selected.length);
+    }, 0);
+  };
+
+  // Add a prefix at the start of the line (heading, list, quote)
+  const linePrefix = (prefix, placeholder) => {
+    const el = ref.current;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selected = value.slice(start, end) || placeholder;
+    const needsNewline = start > 0 && value[start - 1] !== '\n' ? '\n' : '';
+    onChange(value.slice(0, start) + needsNewline + prefix + selected + value.slice(end));
+    setTimeout(() => el.focus(), 0);
+  };
+
+  const tools = [
+    { icon: <Bold size={14}/>, label: 'Bold', run: () => wrap('**', '**', 'bold text') },
+    { icon: <Italic size={14}/>, label: 'Italic', run: () => wrap('*', '*', 'italic text') },
+    { icon: <Heading2 size={14}/>, label: 'Heading', run: () => linePrefix('## ', 'Heading') },
+    { icon: <List size={14}/>, label: 'List', run: () => linePrefix('- ', 'List item') },
+    { icon: <ListOrdered size={14}/>, label: '1. List', run: () => linePrefix('1. ', 'List item') },
+    { icon: <Quote size={14}/>, label: 'Quote', run: () => linePrefix('> ', 'Quote') },
+    { icon: <Code size={14}/>, label: 'Code', run: () => wrap('`', '`', 'code') },
+    { icon: <LinkIcon size={14}/>, label: 'Link', run: () => wrap('[', '](https://)', 'link text') },
+  ];
+
+  return (
+    <div>
+      <div className="md-toolbar">
+        {tools.map(t => (
+          <button key={t.label} type="button" className="btn-secondary" onClick={t.run} disabled={preview}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+        <button type="button" className="btn-secondary" onClick={() => fileRef.current.click()} disabled={preview || uploading}>
+          <ImageIcon size={14}/> {uploading ? 'Uploading...' : 'Image'}
+        </button>
+        <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={handleImage} style={{ display: 'none' }} />
+        <button type="button" onClick={() => setPreview(!preview)} style={{ marginLeft: 'auto' }}>
+          {preview ? <><Pencil size={14}/> Edit</> : <><Eye size={14}/> Preview</>}
+        </button>
+      </div>
+
+      {preview ? (
+        <div className="md-preview markdown-body">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{value || '*Nothing to preview yet...*'}</ReactMarkdown>
+        </div>
+      ) : (
+        <textarea
+          ref={ref}
+          rows="10"
+          placeholder="Write your blog in Markdown..."
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          required
+          style={{ fontFamily: 'Consolas, monospace' }}
+        />
+      )}
     </div>
   );
 }
@@ -291,6 +441,8 @@ function AdminDashboard() {
         </div>
       </div>
 
+      <AIGenerator api={API} token={token} onGenerated={(blog) => { setEditingId(null); setForm(blog); }} />
+
       <div className="card">
         <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '15px' }}>{editingId ? 'Edit Blog' : 'Create New Blog'}</h3>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -298,7 +450,7 @@ function AdminDashboard() {
             <input type="text" placeholder="Blog Title" value={form.title} onChange={e=>setForm({...form, title: e.target.value})} required/>
             <input type="text" placeholder="Tags (comma separated e.g. React, Node)" value={form.tags} onChange={e=>setForm({...form, tags: e.target.value})} required/>
           </div>
-          <textarea placeholder="Main Content / Body" rows="4" value={form.content} onChange={e=>setForm({...form, content: e.target.value})} required></textarea>
+          <MarkdownEditor value={form.content} onChange={v => setForm({ ...form, content: v })} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
             <input type="text" placeholder="Conclusion" value={form.conclusion} onChange={e=>setForm({...form, conclusion: e.target.value})} required/>
             <select value={form.status} onChange={e=>setForm({...form, status: e.target.value})}>
@@ -306,6 +458,15 @@ function AdminDashboard() {
               <option value="Published">Published</option>
             </select>
           </div>
+          {form.coverImage && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <img src={imgUrl(form.coverImage)} alt="Cover"
+                style={{ width: '160px', height: '90px', objectFit: 'cover', borderRadius: '8px' }} />
+              <button type="button" className="btn-danger" onClick={() => setForm({ ...form, coverImage: '' })}>
+                Remove cover image
+              </button>
+            </div>
+          )}
           <div style={{ display: 'flex', gap: '10px' }}>
             <button type="submit">{editingId ? 'Update Blog' : 'Publish Blog'}</button>
             {editingId && <button type="button" onClick={() => { setEditingId(null); setForm({ title: '', content: '', tags: '', conclusion: '', status: 'Draft' }); }} className="btn-secondary">Cancel</button>}

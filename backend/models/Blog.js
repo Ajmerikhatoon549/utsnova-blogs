@@ -4,6 +4,7 @@ const blogSchema = new mongoose.Schema({
   title: { type: String, required: true },
   content: { type: String, required: true },
   tags: { type: [String], required: true },
+  coverImage: { type: String, default: '' },
   conclusion: { type: String, required: true },
   status: { type: String, enum: ['Draft', 'Published'], default: 'Draft' }
 }, { timestamps: true });

@@ -81,8 +81,16 @@ button:hover {
   padding: 2rem 1rem;
 }
 
-/* Cards */
-.card {
+/* --- BLOG LIST & CARDS (Home Page) --- */
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.blog-card {
+  width: 345px;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -93,11 +101,13 @@ button:hover {
   justify-content: space-between;
 }
 
-.grid-3 {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-top: 2rem;
+/* --- ADMIN DASHBOARD CARDS & FORMS --- */
+.card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 /* Forms & Inputs */
@@ -160,3 +170,42 @@ th {
   font-weight: 600;
   color: #475569;
 }
+.admin-form-container {
+  max-width: 700px;
+  margin-top: 2rem;
+}
+/* --- MARKDOWN CONTENT --- */
+.markdown-body { line-height: 1.8; color: #334155; word-wrap: break-word; }
+.markdown-body > *:first-child { margin-top: 0; }
+.markdown-body h1 { font-size: 2rem; font-weight: 800; margin: 1.5rem 0 0.75rem; color: #1e293b; }
+.markdown-body h2 { font-size: 1.6rem; font-weight: 700; margin: 1.4rem 0 0.7rem; color: #1e293b; }
+.markdown-body h3 { font-size: 1.3rem; font-weight: 700; margin: 1.2rem 0 0.6rem; color: #1e293b; }
+.markdown-body p { margin: 0 0 1rem; }
+.markdown-body ul, .markdown-body ol { margin: 0 0 1rem 1.5rem; padding-left: 1rem; }
+.markdown-body ul { list-style: disc; }
+.markdown-body ol { list-style: decimal; }
+.markdown-body li { margin-bottom: 0.35rem; }
+.markdown-body a { color: #4f46e5; text-decoration: underline; }
+.markdown-body strong { font-weight: 700; }
+.markdown-body em { font-style: italic; }
+.markdown-body blockquote {
+  border-left: 4px solid #4f46e5; background: #f8fafc;
+  padding: 0.75rem 1rem; margin: 0 0 1rem; color: #64748b;
+}
+.markdown-body code {
+  background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 4px;
+  font-family: Consolas, monospace; font-size: 0.9em;
+}
+.markdown-body pre {
+  background: #1e293b; color: #e2e8f0; padding: 1rem;
+  border-radius: 8px; overflow-x: auto; margin: 0 0 1rem;
+}
+.markdown-body pre code { background: transparent; padding: 0; color: inherit; }
+.markdown-body img { max-width: 100%; border-radius: 8px; }
+.markdown-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 1.5rem 0; }
+.markdown-body table { margin-bottom: 1rem; }
+
+/* Editor toolbar */
+.md-toolbar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.md-toolbar button { padding: 0.35rem 0.6rem; display: flex; align-items: center; gap: 4px; font-size: 0.8rem; }
+.md-preview { border: 1px solid #cbd5e1; border-radius: 6px; padding: 1rem; min-height: 180px; background: #fff; }
